@@ -1,6 +1,7 @@
 package com.nttdata.bootcamp.service;
 
 import com.nttdata.bootcamp.entity.Active;
+import com.nttdata.bootcamp.entity.response.MessageResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -10,5 +11,5 @@ public interface BusinessService {
     Flux<Active> findAllBusiness();
     Mono<Active> findByAccountNumberBusiness(String accountNumber);
     Flux<Active> findByCustomerBusiness(String dni);
-    Mono<Void> deleteBusiness(String accountNumber);
+    Mono<MessageResponse> deleteBusiness(String accountNumber);
 }

@@ -1,6 +1,7 @@
 package com.nttdata.bootcamp.service;
 
 import com.nttdata.bootcamp.entity.Active;
+import com.nttdata.bootcamp.entity.response.MessageResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -10,5 +11,5 @@ public interface CreditCardService {
     Flux<Active> findAllCreditCard();
     Mono<Active> findByAccountNumberCreditCard(String accountNumber);
     Flux<Active> findByCustomerCreditCard(String dni);
-    Mono<Void> deleteCreditCard(String accountNumber);
+    Mono<MessageResponse> deleteCreditCard(String accountNumber);
 }

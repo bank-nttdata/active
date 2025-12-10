@@ -28,29 +28,20 @@ public class ReportController {
     @Autowired
     private CreditCardService creditCardService;
 
-
     @GetMapping("/reportAccountsByCustomer/{dni}")
     public Flux<ActiveDto> findCurrentAccountByAccountNumber(@PathVariable("dni") String dni) {
 
-        Flux<Active> listBusiness= businessService.findByCustomerBusiness(dni);
-        Flux<Active> listCreditCard = creditCardService.findByCustomerCreditCard(dni);
-        Flux<Active> listStaff= staffService.findByCustomerStaff(dni);
+        Flux<ActiveDto> business = businessService.findByCustomerBusiness(dni)
+                .map(x -> new ActiveDto(x.getDni(), x.getTypeCustomer(), x.getAccountNumber(), "CurrentAccount"));
 
-        ArrayList<ActiveDto> listActive = new ArrayList<>();
+        Flux<ActiveDto> creditCard = creditCardService.findByCustomerCreditCard(dni)
+                .map(x -> new ActiveDto(x.getDni(), x.getTypeCustomer(), x.getAccountNumber(), "SavingAccount"));
 
-        listBusiness.
-                toStream().
-                forEach(x-> listActive.add(new ActiveDto(x.getDni(), x.getTypeCustomer(), x.getAccountNumber(),"CurrentAccount")));
-        listCreditCard.
-                toStream().
-                forEach(x-> listActive.add(new ActiveDto(x.getDni(), x.getTypeCustomer(), x.getAccountNumber(),"SavingAccount")));
-        listStaff.
-                toStream().
-                forEach(x-> listActive.add(new ActiveDto(x.getDni(), x.getTypeCustomer(), x.getAccountNumber(),"FixedTermAccount")));
+        Flux<ActiveDto> staff = staffService.findByCustomerStaff(dni)
+                .map(x -> new ActiveDto(x.getDni(), x.getTypeCustomer(), x.getAccountNumber(), "FixedTermAccount"));
 
-        return Flux.fromStream(listActive.stream());
-
-
+        return Flux.merge(business, creditCard, staff);
     }
+
 
 }

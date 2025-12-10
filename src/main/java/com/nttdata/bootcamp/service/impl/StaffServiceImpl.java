@@ -15,65 +15,70 @@ public class StaffServiceImpl implements StaffService {
     @Autowired
     private ActiveRepository activeRepository;
 
-
+    // --- SAVE ---
     @Override
     public Mono<Active> saveStaff(Active dataStaff) {
+
         dataStaff.setBusiness(false);
         dataStaff.setStaff(true);
         dataStaff.setCreditCard(false);
-        Mono<Active> activeMono = findByAccountNumberStaff(dataStaff.getAccountNumber())
-                .flatMap(__ -> Mono.<Active>error(new Error("The personal credit card " + dataStaff.getAccountNumber() + " exists")))
+
+        return activeRepository.findByAccountNumber(dataStaff.getAccountNumber())
+                .filter(Active::getStaff)
+                .flatMap(existing ->
+                        Mono.<Active>error(new RuntimeException(
+                                "The staff account " + dataStaff.getAccountNumber() + " already exists"))
+                )
                 .switchIfEmpty(activeRepository.save(dataStaff));
-        return activeMono;
     }
 
 
+
+    // --- UPDATE ---
     @Override
     public Mono<Active> updateStaff(Active dataStaff) {
-        Mono<Active> activeMono = findByAccountNumberStaff(dataStaff.getAccountNumber());
-        //.delayElement(Duration.ofMillis(1000));
-        try {
-            dataStaff.setDni(activeMono.block().getDni());
-            dataStaff.setCreationDate(activeMono.block().getCreationDate());
-            return activeRepository.save(dataStaff);
-        }catch (Exception e){
-            return Mono.<Active>error(new Error("The personal credit card " + dataStaff.getAccountNumber() + " does not exists"));
-        }
+
+        return activeRepository.findByAccountNumber(dataStaff.getAccountNumber())
+                .switchIfEmpty(Mono.error(new RuntimeException(
+                        "The staff account " + dataStaff.getAccountNumber() + " does not exist")))
+                .flatMap(existing -> {
+
+                    // Mantener campos de creación
+                    dataStaff.setDni(existing.getDni());
+                    dataStaff.setCreationDate(existing.getCreationDate());
+
+                    return activeRepository.save(dataStaff);
+                });
     }
 
-
+    // --- FIND ALL ---
     @Override
     public Flux<Active> findAllStaff() {
-        Flux<Active> actives = activeRepository.findAll();
-        return actives;
+        return activeRepository.findAll()
+                .filter(Active::getStaff);
     }
 
+    // --- FIND BY DNI ---
     @Override
     public Flux<Active> findByCustomerStaff(String dni) {
-        Flux<Active> actives = activeRepository
-                .findAll()
-                .filter(x -> x.getDni().equals(dni));
-        return actives;
+        return activeRepository.findByDni(dni)
+                .filter(Active::getStaff);
     }
 
+    // --- FIND BY ACCOUNT NUMBER ---
     @Override
     public Mono<Active> findByAccountNumberStaff(String accountNumber) {
-        Mono<Active> active = activeRepository
-                .findAll()
-                .filter(x -> x.getAccountNumber().equals(accountNumber))
-                .next();
-        return active;
+        return activeRepository.findByAccountNumber(accountNumber)
+                .filter(Active::getStaff);
     }
 
-
+    // --- DELETE ---
     @Override
     public Mono<Void> deleteStaff(String accountNumber) {
-        Mono<Active> activeMono = findByAccountNumberStaff(accountNumber);
-        try{
-            return activeRepository.delete(activeMono.block());
-        }catch (Exception e){
-            return Mono.<Void>error(new Error("The personal credit card \" + dataActive.getAccountNumber() + \" does not exists"));
-        }
+        return activeRepository.findByAccountNumber(accountNumber)
+                .filter(Active::getStaff)
+                .switchIfEmpty(Mono.error(new RuntimeException(
+                        "The staff account " + accountNumber + " does not exist")))
+                .flatMap(activeRepository::delete);
     }
-
 }

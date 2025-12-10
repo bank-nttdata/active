@@ -2,6 +2,7 @@ package com.nttdata.bootcamp.controller;
 
 import com.nttdata.bootcamp.entity.Active;
 import com.nttdata.bootcamp.entity.dto.BusinessAccountDto;
+import com.nttdata.bootcamp.entity.response.MessageResponse;
 import com.nttdata.bootcamp.service.BusinessService;
 import com.nttdata.bootcamp.util.Constant;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -17,91 +18,110 @@ import java.util.Date;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping(value = "/business")
+@RequestMapping("/business")
 public class BusinessController {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BusinessController.class);
+
     @Autowired
     private BusinessService businessService;
 
-    //search all active business account
-    @CircuitBreaker(name = "active", fallbackMethod = "fallBackGetStaff")
+    // -----------------------------
+    // Find all business accounts
+    // -----------------------------
+    @CircuitBreaker(name = "active", fallbackMethod = "fallbackFlux")
     @GetMapping("/findAllBusiness")
     public Flux<Active> findAllBusiness() {
-        Flux<Active> actives = businessService.findAllBusiness();
-        LOGGER.info("Registered Actives business Products: " + actives);
-        return actives;
+        return businessService.findAllBusiness()
+                .doOnNext(a -> LOGGER.info("Active business: {}", a));
     }
 
-    //Save active business
-    @CircuitBreaker(name = "active", fallbackMethod = "fallBackGetBusiness")
-    @PostMapping(value = "/saveBusiness")
-    public Mono<Active> saveBusiness(@RequestBody BusinessAccountDto dataBusiness){
-        Active active= new Active();
-        Mono.just(active).doOnNext(t -> {
-                    t.setDni(dataBusiness.getDni());
-                    t.setTypeCustomer(Constant.BUSINESS_CUSTOMER);
-                    t.setAccountNumber(dataBusiness.getAccountNumber());
-                    t.setCreditLimit(dataBusiness.getCreditLimit());
-                    t.setCreationDate(new Date());
-                    t.setModificationDate(new Date());
-                    t.setStatus(Constant.ACTIVE_ACTIVE);
+    // -----------------------------
+    // Save Business
+    // -----------------------------
+    @CircuitBreaker(name = "active", fallbackMethod = "fallbackMono")
+    @PostMapping("/saveBusiness")
+    public Mono<Active> saveBusiness(@RequestBody BusinessAccountDto dto) {
 
-                }).onErrorReturn(active).onErrorResume(e -> Mono.just(active))
-                .onErrorMap(f -> new InterruptedException(f.getMessage())).subscribe(x -> LOGGER.info(x.toString()));
-
-        Mono<Active> activeMono = businessService.saveBusiness(active);
-        return activeMono;
+        return Mono.just(dto)
+                .map(data -> {
+                    Active active = new Active();
+                    active.setDni(data.getDni());
+                    active.setTypeCustomer(Constant.BUSINESS_CUSTOMER);
+                    active.setAccountNumber(data.getAccountNumber());
+                    active.setCreditLimit(data.getCreditLimit());
+                    active.setCreationDate(new Date());
+                    active.setModificationDate(new Date());
+                    active.setStatus(Constant.ACTIVE_ACTIVE);
+                    return active;
+                })
+                .flatMap(businessService::saveBusiness)
+                .doOnSuccess(a -> LOGGER.info("Saved business: {}", a));
     }
 
-    //Update active business
-    @CircuitBreaker(name = "active", fallbackMethod = "fallBackGetBusiness")
+    // -----------------------------
+    // Update Business
+    // -----------------------------
+    @CircuitBreaker(name = "active", fallbackMethod = "fallbackMono")
     @PutMapping("/updateBusiness/{accountNumber}")
-    public Mono<Active> updateBusiness(@PathVariable("accountNumber") String accountNumber,
+    public Mono<Active> updateBusiness(@PathVariable String accountNumber,
                                        @Valid @RequestBody Active dataBusiness) {
-        Mono.just(dataBusiness).doOnNext(t -> {
 
-                    t.setAccountNumber(accountNumber);
-                    t.setModificationDate(new Date());
-
-                }).onErrorReturn(dataBusiness).onErrorResume(e -> Mono.just(dataBusiness))
-                .onErrorMap(f -> new InterruptedException(f.getMessage())).subscribe(x -> LOGGER.info(x.toString()));
-
-        Mono<Active> updateActive = businessService.updateBusiness(dataBusiness);
-        return updateActive;
+        return Mono.just(dataBusiness)
+                .map(active -> {
+                    active.setAccountNumber(accountNumber);
+                    active.setModificationDate(new Date());
+                    return active;
+                })
+                .flatMap(businessService::updateBusiness)
+                .doOnSuccess(a -> LOGGER.info("Updated business: {}", a));
     }
 
-
-    //Actives business search by customer
+    // -----------------------------
+    // Find by customer DNI
+    // -----------------------------
     @GetMapping("/findByCustomerBusiness/{dni}")
-    public Flux<Active> findByCustomerBusiness(@PathVariable("dni") String dni) {
-        Flux<Active> actives = businessService.findByCustomerBusiness(dni);
-        LOGGER.info("Registered Actives business Products by customer of dni: "+dni +"-" + actives);
-        return actives;
+    public Flux<Active> findByCustomerBusiness(@PathVariable String dni) {
+        return businessService.findByCustomerBusiness(dni)
+                .doOnNext(a -> LOGGER.info("Business for dni {} -> {}", dni, a));
     }
 
-    //Search business for active by AccountNumber
-    @CircuitBreaker(name = "active", fallbackMethod = "fallBackGetBusiness")
+    // -----------------------------
+    // Find by account number
+    // -----------------------------
+    @CircuitBreaker(name = "active", fallbackMethod = "fallbackMono")
     @GetMapping("/findByAccountNumberBusiness/{accountNumber}")
-    public Mono<Active> findByAccountNumberBusiness(@PathVariable("accountNumber") String accountNumber) {
-        LOGGER.info("Searching active Business product by accountNumber: " + accountNumber);
-        return businessService.findByAccountNumberBusiness(accountNumber);
+    public Mono<Active> findByAccountNumberBusiness(@PathVariable String accountNumber) {
+        return businessService.findByAccountNumberBusiness(accountNumber)
+                .doOnSuccess(a -> LOGGER.info("Found business for account {}", accountNumber));
     }
 
-
-    //Delete active business
-    @CircuitBreaker(name = "active", fallbackMethod = "fallBackGetBusiness")
+    // -----------------------------
+    // Delete business
+    // -----------------------------
+    @CircuitBreaker(name = "active", fallbackMethod = "fallbackVoid")
     @DeleteMapping("/deleteBusiness/{accountNumber}")
-    public Mono<Void> deleteBusiness(@PathVariable("accountNumber") String accountNumber) {
-        LOGGER.info("Deleting active business by accountNumber: " + accountNumber);
-        Mono<Void> delete = businessService.deleteBusiness(accountNumber);
-        return delete;
+    public Mono<MessageResponse> deleteBusiness(@PathVariable String accountNumber) {
+        return businessService.deleteBusiness(accountNumber)
+                .doOnSuccess(v -> LOGGER.info("Deleted business {}", accountNumber));
     }
 
-    private Mono<Active> fallBackGetBusiness(Exception e){
-        Active active= new Active();
-        Mono<Active> businessMono = Mono.just(active);
-        return businessMono;
+    // -----------------------------
+    // Fallbacks
+    // -----------------------------
+    private Mono<Active> fallbackMono(Throwable e) {
+        LOGGER.error("Fallback executed: {}", e.getMessage());
+        return Mono.just(new Active());
+    }
+
+    private Flux<Active> fallbackFlux(Throwable e) {
+        LOGGER.error("Fallback executed: {}", e.getMessage());
+        return Flux.empty();
+    }
+
+    private Mono<Void> fallbackVoid(Throwable e) {
+        LOGGER.error("Fallback executed: {}", e.getMessage());
+        return Mono.empty();
     }
 
 }

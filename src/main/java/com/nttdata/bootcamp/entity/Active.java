@@ -20,22 +20,18 @@ import java.util.Date;
 public class Active {
     @Id
     private String id;
-
     private String dni;
     private String typeCustomer;
     private String accountNumber;
-
     private Boolean staff;
     private Boolean business;
     private Boolean creditCard;
-
     private Number creditLimit;
     private String status;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     @CreatedDate
     private Date creationDate;
-
     @JsonFormat(pattern = "yyyy-MM-dd")
     @LastModifiedDate
     private Date modificationDate;
