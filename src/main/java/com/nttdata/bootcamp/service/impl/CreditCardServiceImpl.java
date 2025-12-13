@@ -100,19 +100,58 @@ public class CreditCardServiceImpl implements CreditCardService {
     // CREATE CREDIT CARD
     // ============================================================
     @Override
-    public Mono<Active> saveCreditCard(Active dataActiveCreditCard) {
+    public Mono<Active> saveCreditCard(Active credit) {
 
-        dataActiveCreditCard.setBusiness(false);
-        dataActiveCreditCard.setStaff(false);
-        dataActiveCreditCard.setCreditCard(true);
+        credit.setBusiness(false);
+        credit.setStaff(false);
+        credit.setCreditCard(true);
+        Mono<String> typeCustomerMono =
+                activeRepository.findByDni(credit.getDni())
+                        .filter(a -> !a.getCreditCard()) // SOLO cliente base
+                        .next()
+                        .map(Active::getTypeCustomer)
+                        .switchIfEmpty(Mono.error(
+                                new RuntimeException("No existe cliente registrado con ese Dni")
+                        ));
 
-        return findByAccountNumberCreditCard(dataActiveCreditCard.getAccountNumber())
-                .flatMap(existing ->
-                        Mono.<Active>error(new RuntimeException(
-                                "The credit card " + dataActiveCreditCard.getAccountNumber() + " already exists"))
-                )
-                .switchIfEmpty(activeRepository.save(dataActiveCreditCard));
+        return typeCustomerMono.flatMap(typeCustomer -> {
+
+            credit.setTypeCustomer(typeCustomer);
+            Mono<Boolean> existsCreditByAccount =
+                    activeRepository
+                            .findByAccountNumberAndCreditCard(credit.getAccountNumber(), true)
+                            .hasElement();
+
+            Mono<Boolean> existsCreditForPersonal =
+                    "PERSONAL".equalsIgnoreCase(typeCustomer)
+                            ? activeRepository
+                            .findByDniAndCreditCard(credit.getDni(), true)
+                            .hasElements()
+                            : Mono.just(false);
+
+            return Mono.zip(existsCreditByAccount, existsCreditForPersonal)
+                    .flatMap(tuple -> {
+
+                        if (tuple.getT1()) {
+                            return Mono.error(new RuntimeException(
+                                    "La tarjeta de crédito " + credit.getAccountNumber() + " ya existe"
+                            ));
+                        }
+
+                        if (tuple.getT2()) {
+                            return Mono.error(new RuntimeException(
+                                    "El cliente PERSONAL con DNI " + credit.getDni()
+                                            + " ya tiene un crédito registrado"
+                            ));
+                        }
+
+                        return activeRepository.save(credit);
+                    });
+        });
     }
+
+
+
 
 
     // ============================================================

@@ -9,4 +9,10 @@ public interface ActiveRepository extends ReactiveCrudRepository<Active, String>
     Mono<Active> findByAccountNumber(String accountNumber);
 
     Flux<Active> findByDni(String dni);
+
+    Flux<Active> findByDniAndCreditCard(String dni, boolean creditCard);
+
+    Mono<Active> findByAccountNumberAndCreditCard(String accountNumber, boolean creditCard);
+
+
 }
