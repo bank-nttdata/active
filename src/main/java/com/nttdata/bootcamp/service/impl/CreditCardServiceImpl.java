@@ -209,15 +209,6 @@ public class CreditCardServiceImpl implements CreditCardService {
     // ============================================================
     // FIND BY ACCOUNT NUMBER
     // ============================================================
-//    @Override
-//    public Mono<Active> findByAccountNumberCreditCard(String accountNumber) {
-//        return activeRepository.findAll()
-//                .filter(active ->
-//                        Boolean.TRUE.equals(active.getCreditCard()) &&
-//                                active.getAccountNumber().equals(accountNumber)
-//                )
-//                .next();
-//    }
     @Override
     public Mono<Active> findByAccountNumberCreditCard(String accountNumber) {
         return activeRepository.findAll()

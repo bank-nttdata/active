@@ -21,6 +21,7 @@ public class Active {
     @Id
     private String id;
     private String dni;
+    private String ruc;
     private String typeCustomer;
     private String accountNumber;
     private Boolean staff;

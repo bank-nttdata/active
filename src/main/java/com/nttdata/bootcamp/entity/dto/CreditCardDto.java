@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreditCardDto {
     private String dni;
+    private String ruc;
     private String accountNumber;
     private Double creditLimit;
 }

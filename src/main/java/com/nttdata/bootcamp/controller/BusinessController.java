@@ -47,6 +47,7 @@ public class BusinessController {
                 .map(data -> {
                     Active active = new Active();
                     active.setDni(data.getDni());
+                    active.setRuc(data.getRuc());
                     active.setTypeCustomer(Constant.BUSINESS_CUSTOMER);
                     active.setAccountNumber(data.getAccountNumber());
                     active.setCreditLimit(data.getCreditLimit());

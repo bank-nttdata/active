@@ -159,6 +159,7 @@ public class CreditCardController {
     public Mono<Active> saveCreditCard(@RequestBody @Valid CreditCardDto dto) {
 
         Active active = new Active();
+        active.setRuc(dto.getRuc());
         active.setDni(dto.getDni());
         active.setAccountNumber(dto.getAccountNumber());
         active.setCreditLimit(dto.getCreditLimit());
